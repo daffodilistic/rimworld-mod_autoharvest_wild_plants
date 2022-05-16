@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <LanguageData>
-  <FreshCarrionSpotted>Fresh carrion spotted: {0}</FreshCarrionSpotted>
+  <RipePlantSpotted>A wild crop is ripe for harvest: {0}</RipePlantSpotted>
 </LanguageData>
