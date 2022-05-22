@@ -90,10 +90,11 @@ namespace Daffodilistic.RimWorld.AutoHarvestWildPlants
             // "\nPurpose:" + plant.def.plant.purpose.ToString().ToLower());
 
             bool isFood = plant.def.plant.purpose.ToString().ToLower() == "food";
+            bool isNotZoned = !plant.IsCrop;
             // NOTE Wild Healroots do not have the "health" purpose set
             bool isMedicine = plant.def.plant.purpose.ToString().ToLower() == "health" || plant.Label.ToLower() == "wild healroot";
-
-            if (isFood || isMedicine)
+            
+            if ((isFood || isMedicine) && isNotZoned)
             {
                 return true;
             }
