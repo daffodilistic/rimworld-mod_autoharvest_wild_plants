@@ -1,8 +1,10 @@
-"Allow Dead Animals" mod for RimWorld 1.3,[1.2](https://github.com/andrew-raphael-lukasik/rimworld-mod_allow-dead-animals/tree/1.2)
+# Auto-Harvest Wild Plants
+A RimWorld mod that automatically marks harvestable wild plants for you.
+## Description
+This is a simple mod that automatically marks wild plants which are fully-grown
+on the current map. Avoids marking plants in growing zones as well.
 
-https://steamcommunity.com/sharedfiles/filedetails/?id=2403873031
+Made for people tired of constantly manually looking around the map for wild
+plants to harvest.
 
-# Description
-Mod that auto-allows freshly killed animals for butchering.
-
-Made for people tired of constantly manually looking around for animals freshly killed by wild predators to steal their meal.
+Based on the "Allow Dead Animals" mod (https://github.com/andrew-raphael-lukasik/rimworld-mod_allow-dead-animals/)
