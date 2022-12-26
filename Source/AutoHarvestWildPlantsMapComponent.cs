@@ -10,9 +10,6 @@ namespace Daffodilistic.RimWorld.AutoHarvestWildPlants
         const int k_ticks_threshold = 1000;
         int _ticks = 0;
 
-        /// <remarks> TODO should use a list with weak references for automatic GC? </remarks>
-        HashSet<Plant> _allowedAlready;
-
         AutoHarvestWildPlantsModSettings _settings = null;
         TickManager _tickManager = null;
 
@@ -22,7 +19,6 @@ namespace Daffodilistic.RimWorld.AutoHarvestWildPlants
             _settings = LoadedModManager
                 .GetMod<AutoHarvestWildPlantsMod>()
                 .GetSettings<AutoHarvestWildPlantsModSettings>();
-            _allowedAlready = new HashSet<Plant>();
             _tickManager = Find.TickManager;
         }
 
@@ -52,12 +48,8 @@ namespace Daffodilistic.RimWorld.AutoHarvestWildPlants
 
             bool allow = _settings.allow;
             bool notify = _settings.notify;
-            bool allowAnimal = _settings.allowAnimal;
-            bool allowInsect = _settings.allowInsect;
-            bool allowHumanlike = _settings.allowHumanlike;
-            bool allowMechanoid = _settings.allowMechanoid;
 
-            if (!allow && !notify) return;// lets not fill _allowedAlready for nothing
+            if (!allow && !notify) return;
 
             var list = map.listerThings.ThingsInGroup(ThingRequestGroup.HarvestablePlant);
             LogMessage("[AutoHarvestWildPlants] AutoHarvestWildPlants() list.Count:" + list.Count);
@@ -65,27 +57,19 @@ namespace Daffodilistic.RimWorld.AutoHarvestWildPlants
             {
                 if (
                     (Plant)list[i] is Plant wildPlant
-                    && !_allowedAlready.Contains(wildPlant)
                     && wildPlant.Growth == 1.0f
                     && validHarvestTarget(wildPlant)
                 )
                 {
-                    _allowedAlready.Add(wildPlant);
-
                     if (allow)
-                        map.designationManager.AddDesignation(new Designation(wildPlant, DesignationDefOf.HarvestPlant));
-                    else
                     {
-                        if (notify)
-                            Messages.Message(
-                            $"{wildPlant.LabelCap} is not allowed to be harvested.",
-                            wildPlant,
-                            MessageTypeDefOf.NegativeEvent
-                            );
+                        map.designationManager.AddDesignation(new Designation(wildPlant, DesignationDefOf.HarvestPlant));
                     }
 
                     if (notify)
-                    Messages.Message(text: "RipePlantSpotted".Translate((NamedArgument)wildPlant.LabelShort), lookTargets: wildPlant, def: MessageTypeDefOf.NeutralEvent);
+                    {
+                        Messages.Message(text: "RipePlantSpotted".Translate((NamedArgument)wildPlant.LabelShort), lookTargets: wildPlant, def: MessageTypeDefOf.NeutralEvent);
+                    }
                 }
             }
             LogMessage("[AutoHarvestWildPlants] AutoHarvestWildPlants() END");
@@ -100,8 +84,10 @@ namespace Daffodilistic.RimWorld.AutoHarvestWildPlants
             bool isNotZoned = !plant.IsCrop;
             // NOTE Wild Healroots do not have the "health" purpose set
             bool isMedicine = plant.def.plant.purpose.ToString().ToLower() == "health" || plant.Label.ToLower() == "wild healroot";
-            
-            if ((isFood || isMedicine) && isNotZoned)
+            // Check if plant is not designated already
+            bool isNotDesignated = map.designationManager.DesignationOn(plant, DesignationDefOf.HarvestPlant) == null;
+
+            if ((isFood || isMedicine) && isNotZoned && isNotDesignated)
             {
                 return true;
             }
@@ -110,7 +96,8 @@ namespace Daffodilistic.RimWorld.AutoHarvestWildPlants
 
         public override void ExposeData()
         {
-            Scribe_Collections.Look(ref _allowedAlready, false, nameof(_allowedAlready), LookMode.Reference);
+            // No data is exposed since  allowedAlready should
+            // not be saved to savegame file
             base.ExposeData();
         }
 
