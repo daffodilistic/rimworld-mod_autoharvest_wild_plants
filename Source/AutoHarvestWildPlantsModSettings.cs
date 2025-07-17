@@ -6,12 +6,7 @@ namespace Daffodilistic.RimWorld.AutoHarvestWildPlants
     {
 
         public bool allow = true;
-        public bool allowAnimal = true;
-        public bool allowInsect = false;
-        public bool allowHumanlike = false;
-        public bool allowMechanoid = false;
         public bool notify = true;
-        public float mass_threshold = 10;
 
         public override void ExposeData()
         {

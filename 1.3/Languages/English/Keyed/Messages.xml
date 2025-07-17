@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <LanguageData>
   <RipePlantSpotted>A wild crop is ripe for harvest: {0}</RipePlantSpotted>
+  <RipePlantSpottedMultiple>There are several wild crops that can be harvested!</RipePlantSpottedMultiple>
 </LanguageData>

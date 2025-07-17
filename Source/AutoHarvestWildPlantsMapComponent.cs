@@ -1,10 +1,21 @@
-﻿using System.Threading.Tasks;
+﻿using RimWorld;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Reflection;
+using System.Threading.Tasks;
+using UnityEngine;
 using Verse;
-using RimWorld;
+using Verse.Noise;
 
 namespace Daffodilistic.RimWorld.AutoHarvestWildPlants
 {
+    public class ObjectCopier
+    {
+        public static object ShallowCopy(object o)
+        {
+            return o?.GetType().GetMethod("MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic)?.Invoke(o, null);
+        }
+    }
     public class AutoHarvestWildPlantsMapComponent : MapComponent
     {
         const int k_ticks_threshold = 1000;
@@ -12,6 +23,8 @@ namespace Daffodilistic.RimWorld.AutoHarvestWildPlants
 
         AutoHarvestWildPlantsModSettings _settings = null;
         TickManager _tickManager = null;
+        ColorDef _autoharvestColor = null;
+        DesignationDef _autoharvestDesignation = null;
 
         public AutoHarvestWildPlantsMapComponent(Map map)
             : base(map)
@@ -20,6 +33,19 @@ namespace Daffodilistic.RimWorld.AutoHarvestWildPlants
                 .GetMod<AutoHarvestWildPlantsMod>()
                 .GetSettings<AutoHarvestWildPlantsModSettings>();
             _tickManager = Find.TickManager;
+            _autoharvestColor = new ColorDef
+            {
+                colorType = ColorType.Misc,
+                color = UnityEngine.Color.magenta,
+                displayOrder = int.MaxValue,
+                displayInStylingStationUI = false,
+                randomlyPickable = false
+            };
+            _autoharvestDesignation = (DesignationDef)ObjectCopier.ShallowCopy(DesignationDefOf.CutPlant);
+            _autoharvestDesignation.defName = "AutoharvestWildPlants";
+            _autoharvestDesignation.ResolveDefNameHash();
+
+            // 
         }
 
         public override void MapComponentTick()
@@ -41,9 +67,8 @@ namespace Daffodilistic.RimWorld.AutoHarvestWildPlants
         /// <remarks> Things returned from ThingsInGroup() is NOT thread-safe so EXPECT it can be changed by diffent CPU thread, mid-execution, anytime here.</remarks>
         void AutoHarvestWildPlants()
         {
-            LogMessage("[AutoHarvestWildPlants] AutoHarvestWildPlants() BEGIN");
+            LogMessage("BEGIN");
             Faction playerFaction = Faction.OfPlayer;
-            float massThreshold = _settings.mass_threshold;
             int ticksGame = _tickManager.TicksGame;
 
             bool allow = _settings.allow;
@@ -52,7 +77,8 @@ namespace Daffodilistic.RimWorld.AutoHarvestWildPlants
             if (!allow && !notify) return;
 
             var list = map.listerThings.ThingsInGroup(ThingRequestGroup.HarvestablePlant);
-            LogMessage("[AutoHarvestWildPlants] AutoHarvestWildPlants() list.Count:" + list.Count);
+            LogMessage("Things count:" + list.Count);
+            var plantTargets = new LookTargets();
             for (int i = 0; i < list.Count; i++)
             {
                 if (
@@ -63,16 +89,32 @@ namespace Daffodilistic.RimWorld.AutoHarvestWildPlants
                 {
                     if (allow)
                     {
-                        map.designationManager.AddDesignation(new Designation(wildPlant, DesignationDefOf.HarvestPlant));
+                        var exists = false;
+                        foreach (var designation in map.designationManager.AllDesignationsOn(wildPlant))
+                        {
+                            if (designation.def.defName == _autoharvestDesignation.defName)
+                            {
+                                exists = true;
+                                break;
+                            }
+                        }
+                        if (!exists)
+                        {
+                            var newDesignation = new Designation(wildPlant, _autoharvestDesignation, _autoharvestColor);
+                            map.designationManager.AddDesignation(newDesignation);
+                        }
                     }
 
-                    if (notify)
-                    {
-                        Messages.Message(text: "RipePlantSpotted".Translate((NamedArgument)wildPlant.LabelShort), lookTargets: wildPlant, def: MessageTypeDefOf.NeutralEvent);
-                    }
+                    plantTargets.targets.Add(new TargetInfo(wildPlant));
                 }
             }
-            LogMessage("[AutoHarvestWildPlants] AutoHarvestWildPlants() END");
+
+            if (notify && plantTargets.targets.Count > 0)
+            {
+                Messages.Message(text: "RipePlantSpottedMultiple".Translate(), lookTargets: plantTargets, def: MessageTypeDefOf.NeutralEvent);
+            }
+
+            LogMessage("END");
         }
 
         bool validHarvestTarget(Plant plant)
@@ -86,8 +128,14 @@ namespace Daffodilistic.RimWorld.AutoHarvestWildPlants
             bool isMedicine = plant.def.plant.purpose.ToString().ToLower() == "health" || plant.Label.ToLower() == "wild healroot";
             // Check if plant is not designated already
             bool isNotDesignated = map.designationManager.DesignationOn(plant, DesignationDefOf.HarvestPlant) == null;
+            bool isNotBlighted = !plant.Blighted;
 
-            if ((isFood || isMedicine) && isNotZoned && isNotDesignated)
+            if (
+                (isFood || isMedicine)
+                && isNotZoned
+                && isNotDesignated
+                && isNotBlighted
+            )
             {
                 return true;
             }
